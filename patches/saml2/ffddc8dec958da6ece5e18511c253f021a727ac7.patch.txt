@@ -1,0 +1,63 @@
+From ffddc8dec958da6ece5e18511c253f021a727ac7 Mon Sep 17 00:00:00 2001
+From: "johan.vanmeel" <johan.vanmeel@iodigital.com>
+Date: Fri, 24 Nov 2023 05:11:25 +0100
+Subject: [PATCH] New patch to replace static calls to function.
+
+---
+ src/SAML2/HTTPArtifact.php | 8 +++++---
+ src/SAML2/SOAPClient.php   | 8 +++++---
+ 2 files changed, 10 insertions(+), 6 deletions(-)
+
+diff --git a/src/SAML2/HTTPArtifact.php b/src/SAML2/HTTPArtifact.php
+index 0e87e45a5..85046ebf0 100644
+--- a/src/SAML2/HTTPArtifact.php
++++ b/src/SAML2/HTTPArtifact.php
+@@ -8,9 +8,8 @@
+ use SimpleSAML\Configuration;
+ use SimpleSAML\Metadata\MetaDataStorageHandler;
+ use SimpleSAML\Module\saml\Message as MSG;
+-use SimpleSAML\Store;
++use SimpleSAML\Store\StoreFactory;
+ use SimpleSAML\Utils\HTTP;
+-
+ use SAML2\Utilities\Temporal;
+ use SAML2\XML\saml\Issuer;
+ 
+@@ -38,7 +37,10 @@ class HTTPArtifact extends Binding
+     public function getRedirectURL(Message $message) : string
+     {
+         /** @psalm-suppress UndefinedClass */
+-        $store = Store::getInstance();
++        $config = Configuration::getInstance();
++
++        /** @psalm-suppress UndefinedClass */
++        $store = StoreFactory::getInstance($config->getString('store.type'));
+         if ($store === false) {
+             throw new \Exception('Unable to send artifact without a datastore configured.');
+         }
+diff --git a/src/SAML2/SOAPClient.php b/src/SAML2/SOAPClient.php
+index 01812dc5f..d52e65c2e 100644
+--- a/src/SAML2/SOAPClient.php
++++ b/src/SAML2/SOAPClient.php
+@@ -58,7 +58,8 @@ public function send(Message $msg, Configuration $srcMetadata, Configuration $ds
+         if ($srcMetadata->hasValue('saml.SOAPClient.certificate')) {
+             $cert = $srcMetadata->getValue('saml.SOAPClient.certificate');
+             if ($cert !== false) {
+-                $ctxOpts['ssl']['local_cert'] = Config::getCertPath(
++                $configUtils = new Config();
++                $ctxOpts['ssl']['local_cert'] = $configUtils->getCertPath(
+                     $srcMetadata->getString('saml.SOAPClient.certificate')
+                 );
+                 if ($srcMetadata->hasValue('saml.SOAPClient.privatekey_pass')) {
+@@ -67,8 +68,9 @@ public function send(Message $msg, Configuration $srcMetadata, Configuration $ds
+             }
+         } else {
+             /* Use the SP certificate and privatekey if it is configured. */
+-            $privateKey = Crypto::loadPrivateKey($srcMetadata);
+-            $publicKey = Crypto::loadPublicKey($srcMetadata);
++            $cryptoUtils = new Crypto();
++            $privateKey = $cryptoUtils->loadPrivateKey($srcMetadata);
++            $publicKey = $cryptoUtils->loadPublicKey($srcMetadata);
+             if ($privateKey !== null && $publicKey !== null && isset($publicKey['PEM'])) {
+                 $keyCertData = $privateKey['PEM'].$publicKey['PEM'];
+                 $file = $container->getTempDir().'/'.sha1($keyCertData).'.pem';
