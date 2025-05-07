@@ -1,0 +1,79 @@
+diff --git a/src/SAML2/Assertion.php b/src/SAML2/Assertion.php
+index 48f1b4cbc..828136bd7 100644
+--- a/src/SAML2/Assertion.php
++++ b/src/SAML2/Assertion.php
+@@ -286,6 +286,7 @@ public function __construct(DOMElement $xml = null)
+         $this->parseConditions($xml);
+         $this->parseAuthnStatement($xml);
+         $this->parseAttributes($xml);
++        $this->parseAdviceAttributes($xml);
+         $this->parseEncryptedAttributes($xml);
+         $this->parseSignature($xml);
+     }
+@@ -553,6 +554,29 @@ private function parseAttributes(DOMElement $xml) : void
+         }
+     }
+ 
++    /**
++     * Parse advice attribute statements in assertion.
++     *
++     * @param \DOMElement $xml The XML element with the assertion.
++     * @throws \Exception
++     * @return void
++     */
++    private function parseAdviceAttributes(DOMElement $xml) : void
++    {
++        /** @var \DOMElement[] $attributes */
++        $attributes = Utils::xpQuery($xml, './saml_assertion:Advice/saml_assertion:Assertion/saml_assertion:Statement/saml_xacml:Request/saml_xacml:Resource/saml_xacml:Attribute');
++        foreach ($attributes as $attribute) {
++            if (!$attribute->hasAttribute('AttributeId')) {
++                throw new \Exception('Missing AttributeId on <saml_xacml:Attribute> element.');
++            }
++            $name = $attribute->getAttribute('AttributeId');
++
++            if (!array_key_exists($name, $this->attributes)) {
++                $this->parseAttributeValue($attribute, $name);
++            }
++        }
++    }
++
+ 
+     /**
+      * @param \DOMNode $attribute
+@@ -562,7 +586,7 @@ private function parseAttributes(DOMElement $xml) : void
+     private function parseAttributeValue(DOMNode $attribute, string $attributeName) : void
+     {
+         /** @var \DOMElement[] $values */
+-        $values = Utils::xpQuery($attribute, './saml_assertion:AttributeValue');
++        $values = Utils::xpQuery($attribute, './saml_assertion:AttributeValue|./saml_xacml:AttributeValue');
+ 
+         if ($attributeName === Constants::EPTI_URN_MACE || $attributeName === Constants::EPTI_URN_OID) {
+             foreach ($values as $index => $eptiAttributeValue) {
+diff --git a/src/SAML2/Constants.php b/src/SAML2/Constants.php
+index 0cc5cee71..51610453f 100644
+--- a/src/SAML2/Constants.php
++++ b/src/SAML2/Constants.php
+@@ -251,6 +251,11 @@ class Constants
+      */
+     const NS_MD = 'urn:oasis:names:tc:SAML:2.0:metadata';
+ 
++    /**
++     * The namespace for the SAML 2 metadata.
++     */
++    const NS_XACML = 'urn:oasis:names:tc:xacml:2.0:context:schema:os';
++
+     /**
+      * The namespace fox XML schema.
+      */
+diff --git a/src/SAML2/Utils.php b/src/SAML2/Utils.php
+index 2d84dd480..212051813 100644
+--- a/src/SAML2/Utils.php
++++ b/src/SAML2/Utils.php
+@@ -221,6 +221,7 @@ public static function xpQuery(DOMNode $node, string $query) : array
+             $xpCache->registerNamespace('saml_protocol', Constants::NS_SAMLP);
+             $xpCache->registerNamespace('saml_assertion', Constants::NS_SAML);
+             $xpCache->registerNamespace('saml_metadata', Constants::NS_MD);
++            $xpCache->registerNamespace('saml_xacml', Constants::NS_XACML);
+             $xpCache->registerNamespace('ds', XMLSecurityDSig::XMLDSIGNS);
+             $xpCache->registerNamespace('xenc', XMLSecEnc::XMLENCNS);
+         }

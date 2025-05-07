@@ -1,0 +1,24 @@
+From 3bc97becca5ca81446c979be8687e5be160500ec Mon Sep 17 00:00:00 2001
+From: johanvanmeel <johanvanmeel@hotmail.com>
+Date: Thu, 28 Nov 2024 14:12:36 +0100
+Subject: [PATCH] Replace get_class with static::class
+
+---
+ src/SimpleSAML/Auth/Source.php | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/SimpleSAML/Auth/Source.php b/src/SimpleSAML/Auth/Source.php
+index ef8e54f29e..8c2c8a4c90 100644
+--- a/src/SimpleSAML/Auth/Source.php
++++ b/src/SimpleSAML/Auth/Source.php
+@@ -174,8 +174,8 @@ public function initLogin(string|array $return, ?string $errorURL = null, array
+             '\SimpleSAML\Auth\Source.id' => $this->authId,
+             '\SimpleSAML\Auth\Source.Return' => $return,
+             '\SimpleSAML\Auth\Source.ErrorURL' => $errorURL,
+-            'LoginCompletedHandler' => [get_class(), 'loginCompleted'],
+-            'LogoutCallback' => [get_class(), 'logoutCallback'],
++            'LoginCompletedHandler' => [static::class, 'loginCompleted'],
++            'LogoutCallback' => [static::class, 'logoutCallback'],
+             'LogoutCallbackState' => [
+                 '\SimpleSAML\Auth\Source.logoutSource' => $this->authId,
+             ],
